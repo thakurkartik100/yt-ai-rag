@@ -34,7 +34,7 @@ a **live public demo** so anyone can try it.
 ## Roadmap (v1)
 
 - [x] Runnable API skeleton (`/health`, `/docs`)
-- [ ] Transcript ingestion + fallback
+- [x] Transcript ingestion + fallback
 - [ ] Chunking + local embeddings
 - [ ] Chroma vector store + `/ingest`
 - [ ] Retrieval + grounded `/ask` (streaming, timestamp citations)

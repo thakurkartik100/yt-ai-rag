@@ -29,9 +29,11 @@ class Settings(BaseSettings):
     # Optional fallback — free key at https://aistudio.google.com/apikey
     gemini_api_key: str = ""
 
-    # Exact model id from your provider's console. Groq renames models often,
-    # so confirm the current id before deploying (see README).
-    llm_model: str = "llama-3.3-70b-versatile"
+    # Groq is OpenAI-compatible. Verified 2026-08-26: use openai/gpt-oss-20b for
+    # RAG answer generation. Groq renames models often — discover the current list
+    # via GET {groq_base_url}/models. (The old llama-3.3-* ids no longer exist.)
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    llm_model: str = "openai/gpt-oss-20b"
 
     # --- Embeddings (local, free, no API key) ---
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"

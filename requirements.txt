@@ -7,3 +7,6 @@ fastapi>=0.110
 uvicorn[standard]>=0.29
 pydantic>=2.6
 pydantic-settings>=2.2
+
+# --- v1 milestone 2: transcript ingestion ---
+youtube-transcript-api==1.2.3
