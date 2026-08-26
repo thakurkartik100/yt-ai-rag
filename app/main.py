@@ -14,6 +14,7 @@ from app import __version__
 from app.config import settings
 from app.ingestion import TranscriptUnavailable, format_timestamp, get_transcript
 from app.chunking import chunk_transcript
+from app.embeddings import embed_query
 
 app = FastAPI(
     title="Tube AI RAG API",
@@ -113,4 +114,19 @@ def debug_chunks(
             }
             for chunk in chunks[:limit]
         ],
+    }
+
+
+# --- TEMPORARY debug endpoint (milestone 3) ------------------------------------
+# Shows what an embedding actually is: text in, a list of numbers out.
+@app.get("/debug/embed", tags=["debug"])
+def debug_embed(
+    text: str = Query(..., description="Any text to turn into a vector"),
+) -> dict:
+    """Embed a short piece of text and show the vector's size + first few numbers."""
+    vector = embed_query(text)
+    return {
+        "model": settings.embedding_model,
+        "dimensions": len(vector),
+        "preview": [round(x, 4) for x in vector[:8]],
     }

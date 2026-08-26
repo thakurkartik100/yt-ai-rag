@@ -10,3 +10,6 @@ pydantic-settings>=2.2
 
 # --- v1 milestone 2: transcript ingestion ---
 youtube-transcript-api==1.2.3
+
+# --- v1 milestone 3: embeddings (local, free, no API key) ---
+sentence-transformers>=2.6
