@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from app import __version__
 from app.config import settings
 from app.ingestion import TranscriptUnavailable, format_timestamp, get_transcript
+from app.chunking import chunk_transcript
 
 app = FastAPI(
     title="Tube AI RAG API",
@@ -75,5 +76,41 @@ def debug_transcript(
         "preview": [
             {"at": format_timestamp(seg.start), "text": seg.text}
             for seg in transcript.segments[:limit]
+        ],
+    }
+
+
+# --- TEMPORARY debug endpoint (milestone 2) ------------------------------------
+# Lets you see how the transcript gets sliced into chunks. Also folded into the
+# real pipeline later and removed.
+@app.get("/debug/chunks", tags=["debug"])
+def debug_chunks(
+    url: str = Query(..., description="YouTube URL or 11-character video id"),
+    chunk_size: int = Query(120, ge=20, le=400, description="Words per chunk"),
+    overlap: int = Query(20, ge=0, le=100, description="Words shared with the previous chunk"),
+    limit: int = Query(3, ge=1, le=20, description="How many chunks to preview"),
+) -> dict:
+    """Fetch a transcript, split it into overlapping chunks, and preview the first few."""
+    try:
+        transcript = get_transcript(url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except TranscriptUnavailable as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    chunks = chunk_transcript(transcript, chunk_size=chunk_size, overlap=overlap)
+    return {
+        "video_id": transcript.video_id,
+        "total_chunks": len(chunks),
+        "chunk_size": chunk_size,
+        "overlap": overlap,
+        "preview": [
+            {
+                "index": chunk.index,
+                "starts_at": format_timestamp(chunk.start),
+                "words": len(chunk.text.split()),
+                "text": chunk.text,
+            }
+            for chunk in chunks[:limit]
         ],
     }
