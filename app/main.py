@@ -7,6 +7,8 @@ Run locally with:
 Then open http://127.0.0.1:8000/docs for the interactive API.
 """
 
+from typing import Optional
+
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
@@ -14,7 +16,8 @@ from app import __version__
 from app.config import settings
 from app.ingestion import TranscriptUnavailable, format_timestamp, get_transcript
 from app.chunking import chunk_transcript
-from app.embeddings import embed_query
+from app.embeddings import embed_query, embed_texts
+from app.vectorstore import add_chunks, has_video
 
 app = FastAPI(
     title="Tube AI RAG API",
@@ -130,3 +133,35 @@ def debug_embed(
         "dimensions": len(vector),
         "preview": [round(x, 4) for x in vector[:8]],
     }
+
+
+# --- Ingest: index a whole video (fetch -> chunk -> embed -> store) -------------
+class IngestRequest(BaseModel):
+    url: str
+    pasted_text: Optional[str] = None
+
+
+class IngestResponse(BaseModel):
+    video_id: str
+    chunks_indexed: int
+    already_indexed: bool
+
+
+@app.post("/ingest", response_model=IngestResponse, tags=["rag"])
+def ingest(req: IngestRequest) -> IngestResponse:
+    """Index a video so it can be questioned: fetch transcript -> chunk -> embed -> store."""
+    try:
+        transcript = get_transcript(req.url, pasted_text=req.pasted_text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except TranscriptUnavailable as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    video_id = transcript.video_id
+    if has_video(video_id):
+        return IngestResponse(video_id=video_id, chunks_indexed=0, already_indexed=True)
+
+    chunks = chunk_transcript(transcript)
+    vectors = embed_texts([chunk.text for chunk in chunks])
+    add_chunks(video_id, chunks, vectors)
+    return IngestResponse(video_id=video_id, chunks_indexed=len(chunks), already_indexed=False)

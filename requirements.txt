@@ -13,3 +13,6 @@ youtube-transcript-api==1.2.3
 
 # --- v1 milestone 3: embeddings (local, free, no API key) ---
 sentence-transformers>=2.6
+
+# --- v1 milestone 4: vector store ---
+chromadb>=0.5
