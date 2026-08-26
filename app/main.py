@@ -14,10 +14,11 @@ from pydantic import BaseModel
 
 from app import __version__
 from app.config import settings
-from app.ingestion import TranscriptUnavailable, format_timestamp, get_transcript
+from app.ingestion import TranscriptUnavailable, extract_video_id, format_timestamp, get_transcript
 from app.chunking import chunk_transcript
 from app.embeddings import embed_query, embed_texts
-from app.vectorstore import add_chunks, has_video
+from app.vectorstore import add_chunks, has_video, search
+from app.generation import generate_answer
 
 app = FastAPI(
     title="Tube AI RAG API",
@@ -165,3 +166,44 @@ def ingest(req: IngestRequest) -> IngestResponse:
     vectors = embed_texts([chunk.text for chunk in chunks])
     add_chunks(video_id, chunks, vectors)
     return IngestResponse(video_id=video_id, chunks_indexed=len(chunks), already_indexed=False)
+
+
+# --- Ask: retrieve the relevant chunks and answer from them (with citations) ----
+class AskRequest(BaseModel):
+    url: str
+    question: str
+    k: int = 5          # how many chunks to retrieve as evidence
+
+
+class Citation(BaseModel):
+    timestamp: str
+    text: str
+    score: float
+
+
+class AskResponse(BaseModel):
+    answer: str
+    citations: list[Citation]
+
+
+@app.post("/ask", response_model=AskResponse, tags=["rag"])
+def ask(req: AskRequest) -> AskResponse:
+    """Answer a question about an already-ingested video, grounded in its transcript."""
+    if not settings.groq_api_key:
+        raise HTTPException(status_code=400, detail="GROQ_API_KEY is not set in your .env.")
+
+    video_id = extract_video_id(req.url)
+    if not has_video(video_id):
+        raise HTTPException(status_code=404, detail="Video not indexed yet — call /ingest first.")
+
+    hits = search(video_id, embed_query(req.question), k=req.k)
+    try:
+        answer = generate_answer(req.question, hits)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"LLM call failed: {exc}") from exc
+
+    citations = [
+        Citation(timestamp=format_timestamp(hit.start), text=hit.text, score=round(hit.score, 3))
+        for hit in hits
+    ]
+    return AskResponse(answer=answer, citations=citations)

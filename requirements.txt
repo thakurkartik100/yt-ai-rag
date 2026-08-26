@@ -16,3 +16,6 @@ sentence-transformers>=2.6
 
 # --- v1 milestone 4: vector store ---
 chromadb>=0.5
+
+# --- v1 milestone 5: LLM generation (Groq, OpenAI-compatible) ---
+openai>=1.0
