@@ -1,0 +1,9 @@
+# --- v1 milestone 1: runnable skeleton ---
+# This is intentionally small so your first `pip install` + run is fast.
+# We'll add more (youtube-transcript-api, sentence-transformers, chromadb,
+# groq, ragas, ...) as we build each feature.
+
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+pydantic-settings>=2.2
