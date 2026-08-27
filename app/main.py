@@ -18,7 +18,7 @@ from app.ingestion import TranscriptUnavailable, extract_video_id, format_timest
 from app.chunking import chunk_transcript
 from app.embeddings import embed_query, embed_texts
 from app.vectorstore import add_chunks, get_all_chunks, has_video, search
-from app.generation import generate_answer, summarize
+from app.generation import generate_answer, generate_quiz, summarize
 
 app = FastAPI(
     title="Tube AI RAG API",
@@ -236,3 +236,47 @@ def summarize_video(req: SummaryRequest) -> SummaryResponse:
         raise HTTPException(status_code=502, detail=f"LLM call failed: {exc}") from exc
 
     return SummaryResponse(video_id=video_id, summary=text)
+
+
+# --- Quiz: generate a multiple-choice quiz from the video (structured JSON) ------
+class QuizItem(BaseModel):
+    question: str
+    options: list[str]
+    answer: str
+    timestamp: str
+
+
+class QuizRequest(BaseModel):
+    url: str
+    num_questions: int = 5
+
+
+class QuizResponse(BaseModel):
+    video_id: str
+    quiz: list[QuizItem]
+
+
+@app.post("/quiz", response_model=QuizResponse, tags=["rag"])
+def quiz(req: QuizRequest) -> QuizResponse:
+    """Generate a multiple-choice quiz from an already-ingested video."""
+    if not settings.groq_api_key:
+        raise HTTPException(status_code=400, detail="GROQ_API_KEY is not set in your .env.")
+
+    video_id = extract_video_id(req.url)
+    if not has_video(video_id):
+        raise HTTPException(status_code=404, detail="Video not indexed yet — call /ingest first.")
+
+    num = max(1, min(req.num_questions, 20))   # keep the request sane
+    hits = get_all_chunks(video_id)
+    try:
+        items = generate_quiz(hits, num_questions=num)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"LLM call failed: {exc}") from exc
+
+    # The model returns plain dicts; validate each into a QuizItem (4 options, etc.).
+    try:
+        quiz_items = [QuizItem(**item) for item in items]
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Model returned malformed quiz: {exc}") from exc
+
+    return QuizResponse(video_id=video_id, quiz=quiz_items)

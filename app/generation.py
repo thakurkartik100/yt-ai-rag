@@ -10,6 +10,7 @@ base URL — the same code would talk to OpenAI by changing the URL and key.
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 
 from app.config import settings
@@ -71,3 +72,39 @@ def summarize(hits: list[SearchHit]) -> str:
         temperature=0.3,
     )
     return (response.choices[0].message.content or "").strip()
+
+
+QUIZ_SYSTEM_PROMPT = (
+    "You create a multiple-choice quiz from a YouTube transcript. Return ONLY JSON "
+    'matching this schema: {"quiz": [{"question": <str>, '
+    '"options": [<str>, <str>, <str>, <str>], "answer": <str>, "timestamp": <"M:SS">}]}. '
+    "Each question must have exactly 4 options; `answer` must be exactly one of the four "
+    "options; `timestamp` is where the answer is discussed. Use ONLY the transcript."
+)
+
+
+def _extract_json(text: str) -> dict:
+    """Parse a JSON object out of the model's reply, tolerating stray prose or ``` fences."""
+    start, end = text.find("{"), text.rfind("}")
+    if start == -1 or end == -1:
+        raise ValueError("no JSON object found in model output")
+    return json.loads(text[start : end + 1])
+
+
+def generate_quiz(hits: list[SearchHit], num_questions: int = 5) -> list[dict]:
+    """Ask the LLM for a multiple-choice quiz as structured JSON, and parse it."""
+    user_prompt = (
+        f"Transcript:\n{_build_context(hits)}\n\n"
+        f"Write {num_questions} quiz questions as JSON."
+    )
+    response = _client().chat.completions.create(
+        model=settings.llm_model,
+        messages=[
+            {"role": "system", "content": QUIZ_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.4,
+        response_format={"type": "json_object"},   # ask the API to guarantee valid JSON
+    )
+    raw = (response.choices[0].message.content or "").strip()
+    return _extract_json(raw).get("quiz", [])
