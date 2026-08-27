@@ -74,3 +74,19 @@ def search(video_id: str, query_vector: list[float], k: int = 5) -> list[SearchH
         # Chroma returns cosine *distance* (0 = identical); similarity = 1 - distance.
         hits.append(SearchHit(text=text, start=meta.get("start", 0.0), score=1.0 - distance))
     return hits
+
+
+def get_all_chunks(video_id: str) -> list[SearchHit]:
+    """Return every stored chunk of a video, in transcript order (for summarizing).
+
+    Unlike `search`, this doesn't rank by a query — it just fetches the whole video.
+    Chroma's `get` returns flat lists (not nested per-query like `query`), so we sort
+    by the stored chunk index to put the text back in reading order.
+    """
+    result = _collection().get(where={"video_id": video_id})
+    pairs = sorted(
+        zip(result["documents"], result["metadatas"]),
+        key=lambda dm: dm[1].get("index", 0),
+    )
+    # score is irrelevant here (nothing is being ranked) — set 1.0 and reuse SearchHit.
+    return [SearchHit(text=doc, start=meta.get("start", 0.0), score=1.0) for doc, meta in pairs]

@@ -17,8 +17,8 @@ from app.config import settings
 from app.ingestion import TranscriptUnavailable, extract_video_id, format_timestamp, get_transcript
 from app.chunking import chunk_transcript
 from app.embeddings import embed_query, embed_texts
-from app.vectorstore import add_chunks, has_video, search
-from app.generation import generate_answer
+from app.vectorstore import add_chunks, get_all_chunks, has_video, search
+from app.generation import generate_answer, summarize
 
 app = FastAPI(
     title="Tube AI RAG API",
@@ -207,3 +207,32 @@ def ask(req: AskRequest) -> AskResponse:
         for hit in hits
     ]
     return AskResponse(answer=answer, citations=citations)
+
+
+# --- Summary: condense the whole video into timestamped key points --------------
+class SummaryRequest(BaseModel):
+    url: str
+
+
+class SummaryResponse(BaseModel):
+    video_id: str
+    summary: str
+
+
+@app.post("/summary", response_model=SummaryResponse, tags=["rag"])
+def summarize_video(req: SummaryRequest) -> SummaryResponse:
+    """Summarize an already-ingested video using its full transcript."""
+    if not settings.groq_api_key:
+        raise HTTPException(status_code=400, detail="GROQ_API_KEY is not set in your .env.")
+
+    video_id = extract_video_id(req.url)
+    if not has_video(video_id):
+        raise HTTPException(status_code=404, detail="Video not indexed yet — call /ingest first.")
+
+    hits = get_all_chunks(video_id)
+    try:
+        text = summarize(hits)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"LLM call failed: {exc}") from exc
+
+    return SummaryResponse(video_id=video_id, summary=text)

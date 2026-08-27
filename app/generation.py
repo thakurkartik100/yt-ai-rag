@@ -51,3 +51,23 @@ def generate_answer(question: str, hits: list[SearchHit]) -> str:
         temperature=0.2,   # low = stick to the facts, less creative drift
     )
     return (response.choices[0].message.content or "").strip()
+
+
+SUMMARY_SYSTEM_PROMPT = (
+    "You summarize a YouTube video from its transcript. Write one short overview "
+    "sentence, then 3-6 key points as a bulleted list. Begin each bullet with the "
+    "timestamp where that point starts, e.g. '- [6:12] ...'. Use ONLY the transcript."
+)
+
+
+def summarize(hits: list[SearchHit]) -> str:
+    """Summarize the whole video from all its chunks (not a top-k retrieval)."""
+    response = _client().chat.completions.create(
+        model=settings.llm_model,
+        messages=[
+            {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
+            {"role": "user", "content": f"Transcript:\n{_build_context(hits)}\n\nWrite the summary."},
+        ],
+        temperature=0.3,
+    )
+    return (response.choices[0].message.content or "").strip()
