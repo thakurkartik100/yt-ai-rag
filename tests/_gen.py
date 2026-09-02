@@ -1,0 +1,405 @@
+"""Generate the three test files with UTF-8 encoding."""
+import pathlib
+
+TESTS = pathlib.Path("tests")
+
+# ── test_ingestion.py ──────────────────────────────────────────────────────
+TESTS.joinpath("test_ingestion.py").write_text(
+    '"""Unit tests for app.ingestion -- no network calls needed."""\n'
+    '\n'
+    'import pytest\n'
+    '\n'
+    'from app.ingestion import (\n'
+    '    TranscriptUnavailable,\n'
+    '    Segment,\n'
+    '    Transcript,\n'
+    '    extract_video_id,\n'
+    '    format_timestamp,\n'
+    '    from_pasted_text,\n'
+    '    _clean,\n'
+    ')\n'
+    '\n'
+    '\n'
+    'class TestExtractVideoId:\n'
+    '    def test_bare_id(self):\n'
+    '        assert extract_video_id("TgF-uMvhNmg") == "TgF-uMvhNmg"\n'
+    '\n'
+    '    def test_watch_url(self):\n'
+    '        assert extract_video_id("https://www.youtube.com/watch?v=TgF-uMvhNmg") == "TgF-uMvhNmg"\n'
+    '\n'
+    '    def test_short_url(self):\n'
+    '        assert extract_video_id("https://youtu.be/TgF-uMvhNmg") == "TgF-uMvhNmg"\n'
+    '\n'
+    '    def test_embed_url(self):\n'
+    '        assert extract_video_id("https://www.youtube.com/embed/TgF-uMvhNmg") == "TgF-uMvhNmg"\n'
+    '\n'
+    '    def test_shorts_url(self):\n'
+    '        assert extract_video_id("https://www.youtube.com/shorts/TgF-uMvhNmg") == "TgF-uMvhNmg"\n'
+    '\n'
+    '    def test_url_with_extra_params(self):\n'
+    '        url = "https://www.youtube.com/watch?v=TgF-uMvhNmg" + "&t=60s"\n'
+    '        assert extract_video_id(url) == "TgF-uMvhNmg"\n'
+    '\n'
+    '    def test_invalid_url_raises(self):\n'
+    '        with pytest.raises(ValueError):\n'
+    '            extract_video_id("https://vimeo.com/12345678")\n'
+    '\n'
+    '    def test_empty_string_raises(self):\n'
+    '        with pytest.raises(ValueError):\n'
+    '            extract_video_id("")\n'
+    '\n'
+    '    def test_strips_whitespace(self):\n'
+    '        assert extract_video_id("  TgF-uMvhNmg  ") == "TgF-uMvhNmg"\n'
+    '\n'
+    '\n'
+    'class TestFormatTimestamp:\n'
+    '    def test_zero(self):\n'
+    '        assert format_timestamp(0) == "0:00"\n'
+    '\n'
+    '    def test_seconds_only(self):\n'
+    '        assert format_timestamp(45) == "0:45"\n'
+    '\n'
+    '    def test_one_minute(self):\n'
+    '        assert format_timestamp(60) == "1:00"\n'
+    '\n'
+    '    def test_minutes_and_seconds(self):\n'
+    '        assert format_timestamp(372) == "6:12"\n'
+    '\n'
+    '    def test_hours(self):\n'
+    '        assert format_timestamp(3723) == "1:02:03"\n'
+    '\n'
+    '    def test_float_input(self):\n'
+    '        assert format_timestamp(372.9) == "6:12"\n'
+    '\n'
+    '\n'
+    'class TestClean:\n'
+    '    def test_removes_music_tag(self):\n'
+    '        assert _clean("[Music]") == ""\n'
+    '\n'
+    '    def test_removes_applause_tag(self):\n'
+    '        assert _clean("[Applause] hello") == "hello"\n'
+    '\n'
+    '    def test_collapses_whitespace(self):\n'
+    '        assert _clean("hello   world") == "hello world"\n'
+    '\n'
+    '    def test_strips_newlines(self):\n'
+    '        assert _clean("hello\\nworld") == "hello world"\n'
+    '\n'
+    '    def test_empty_string(self):\n'
+    '        assert _clean("") == ""\n'
+    '\n'
+    '\n'
+    'class TestFromPastedText:\n'
+    '    def test_creates_transcript(self):\n'
+    '        t = from_pasted_text("abc12345678", "Hello world")\n'
+    '        assert t.video_id == "abc12345678"\n'
+    '        assert t.source == "manual"\n'
+    '        assert len(t.segments) == 1\n'
+    '        assert "Hello world" in t.segments[0].text\n'
+    '\n'
+    '    def test_empty_text_raises(self):\n'
+    '        with pytest.raises(TranscriptUnavailable):\n'
+    '            from_pasted_text("abc12345678", "   ")\n'
+    '\n'
+    '    def test_only_tags_raises(self):\n'
+    '        with pytest.raises(TranscriptUnavailable):\n'
+    '            from_pasted_text("abc12345678", "[Music][Applause]")\n'
+    '\n'
+    '\n'
+    'class TestTranscript:\n'
+    '    def _make(self, segments):\n'
+    '        return Transcript(video_id="test123456x", language="en", source="youtube", segments=segments)\n'
+    '\n'
+    '    def test_full_text(self):\n'
+    '        t = self._make([Segment("hello", 0.0, 1.0), Segment("world", 1.0, 1.0)])\n'
+    '        assert t.full_text == "hello world"\n'
+    '\n'
+    '    def test_duration(self):\n'
+    '        t = self._make([Segment("a", 0.0, 2.0), Segment("b", 5.0, 3.0)])\n'
+    '        assert t.duration == 8.0\n'
+    '\n'
+    '    def test_empty_transcript_duration(self):\n'
+    '        t = self._make([])\n'
+    '        assert t.duration == 0.0\n',
+    encoding="utf-8",
+)
+print("test_ingestion.py OK")
+
+# ── test_chunking.py ───────────────────────────────────────────────────────
+TESTS.joinpath("test_chunking.py").write_text(
+    '"""Unit tests for app.chunking -- pure logic, no network or disk I/O."""\n'
+    '\n'
+    'import pytest\n'
+    '\n'
+    'from app.chunking import chunk_transcript, Chunk\n'
+    'from app.ingestion import Segment, Transcript\n'
+    '\n'
+    '\n'
+    'def _make_transcript(words: int, seconds_per_word: float = 0.5) -> Transcript:\n'
+    '    text = " ".join(f"word{i}" for i in range(words))\n'
+    '    seg = Segment(text=text, start=0.0, duration=words * seconds_per_word)\n'
+    '    return Transcript(video_id="fakeid12345", language="en", source="youtube", segments=[seg])\n'
+    '\n'
+    '\n'
+    'class TestChunkTranscript:\n'
+    '    def test_returns_list_of_chunks(self):\n'
+    '        t = _make_transcript(200)\n'
+    '        chunks = chunk_transcript(t, chunk_size=100, overlap=10)\n'
+    '        assert isinstance(chunks, list)\n'
+    '        assert all(isinstance(c, Chunk) for c in chunks)\n'
+    '\n'
+    '    def test_chunk_count_reasonable(self):\n'
+    '        t = _make_transcript(200)\n'
+    '        chunks = chunk_transcript(t, chunk_size=100, overlap=10)\n'
+    '        assert len(chunks) >= 2\n'
+    '\n'
+    '    def test_each_chunk_has_text(self):\n'
+    '        t = _make_transcript(150)\n'
+    '        for chunk in chunk_transcript(t, chunk_size=80, overlap=10):\n'
+    '            assert chunk.text.strip() != ""\n'
+    '\n'
+    '    def test_chunk_indices_are_sequential(self):\n'
+    '        t = _make_transcript(300)\n'
+    '        chunks = chunk_transcript(t, chunk_size=100, overlap=20)\n'
+    '        assert [c.index for c in chunks] == list(range(len(chunks)))\n'
+    '\n'
+    '    def test_chunk_word_count_within_size(self):\n'
+    '        chunk_size = 60\n'
+    '        t = _make_transcript(200)\n'
+    '        for chunk in chunk_transcript(t, chunk_size=chunk_size, overlap=10):\n'
+    '            assert len(chunk.text.split()) <= chunk_size\n'
+    '\n'
+    '    def test_single_chunk_when_transcript_short(self):\n'
+    '        t = _make_transcript(50)\n'
+    '        chunks = chunk_transcript(t, chunk_size=100, overlap=10)\n'
+    '        assert len(chunks) == 1\n'
+    '\n'
+    '    def test_empty_transcript_returns_empty_list(self):\n'
+    '        t = Transcript(video_id="fakeid12345", language="en", source="youtube", segments=[])\n'
+    '        assert chunk_transcript(t) == []\n'
+    '\n'
+    '    def test_invalid_chunk_size_raises(self):\n'
+    '        t = _make_transcript(50)\n'
+    '        with pytest.raises(ValueError):\n'
+    '            chunk_transcript(t, chunk_size=0)\n'
+    '\n'
+    '    def test_invalid_overlap_raises(self):\n'
+    '        t = _make_transcript(50)\n'
+    '        with pytest.raises(ValueError):\n'
+    '            chunk_transcript(t, chunk_size=50, overlap=50)\n'
+    '\n'
+    '    def test_overlap_produces_repeated_words(self):\n'
+    '        overlap = 20\n'
+    '        t = _make_transcript(300)\n'
+    '        chunks = chunk_transcript(t, chunk_size=100, overlap=overlap)\n'
+    '        if len(chunks) > 1:\n'
+    '            tail_words = set(chunks[0].text.split()[-overlap:])\n'
+    '            head_words = set(chunks[1].text.split()[:overlap])\n'
+    '            assert tail_words == head_words\n'
+    '\n'
+    '    def test_start_timestamps_non_negative(self):\n'
+    '        t = _make_transcript(200)\n'
+    '        for chunk in chunk_transcript(t):\n'
+    '            assert chunk.start >= 0.0\n',
+    encoding="utf-8",
+)
+print("test_chunking.py OK")
+
+# ── test_api.py ────────────────────────────────────────────────────────────
+TESTS.joinpath("test_api.py").write_text(
+    '"""Integration tests for the FastAPI endpoints.\n'
+    '\n'
+    'All external calls (YouTube, LLM, vector store) are mocked so tests\n'
+    'run offline and deterministically -- no API keys or network needed.\n'
+    '"""\n'
+    '\n'
+    'from unittest.mock import patch\n'
+    '\n'
+    'import pytest\n'
+    'from fastapi.testclient import TestClient\n'
+    '\n'
+    'from app.main import app\n'
+    'from app.chunking import Chunk\n'
+    'from app.ingestion import Segment, Transcript\n'
+    'from app.vectorstore import SearchHit\n'
+    '\n'
+    'client = TestClient(app)\n'
+    '\n'
+    '\n'
+    'def _fake_transcript(video_id="TgF-uMvhNmg"):\n'
+    '    return Transcript(\n'
+    '        video_id=video_id,\n'
+    '        language="en",\n'
+    '        source="youtube",\n'
+    '        segments=[Segment(text="This is a test transcript.", start=0.0, duration=5.0)],\n'
+    '    )\n'
+    '\n'
+    '\n'
+    'def _fake_chunks():\n'
+    '    return [Chunk(index=0, text="This is a test transcript.", start=0.0, end=5.0)]\n'
+    '\n'
+    '\n'
+    'def _fake_hits():\n'
+    '    return [SearchHit(text="This is a test transcript.", start=0.0, score=0.95)]\n'
+    '\n'
+    '\n'
+    'class TestHealth:\n'
+    '    def test_returns_ok(self):\n'
+    '        r = client.get("/health")\n'
+    '        assert r.status_code == 200\n'
+    '        assert r.json()["status"] == "ok"\n'
+    '\n'
+    '    def test_response_has_version(self):\n'
+    '        r = client.get("/health")\n'
+    '        assert "version" in r.json()\n'
+    '\n'
+    '    def test_response_has_llm_model(self):\n'
+    '        r = client.get("/health")\n'
+    '        assert "llm_model" in r.json()\n'
+    '\n'
+    '\n'
+    'class TestRoot:\n'
+    '    def test_returns_message(self):\n'
+    '        r = client.get("/")\n'
+    '        assert r.status_code == 200\n'
+    '        assert "message" in r.json()\n'
+    '\n'
+    '\n'
+    'class TestIngest:\n'
+    '    @patch("app.main.get_transcript", return_value=_fake_transcript())\n'
+    '    @patch("app.main.has_video", return_value=False)\n'
+    '    @patch("app.main.chunk_transcript", return_value=_fake_chunks())\n'
+    '    @patch("app.main.embed_texts", return_value=[[0.1] * 384])\n'
+    '    @patch("app.main.add_chunks")\n'
+    '    def test_successful_ingest(self, mock_add, mock_embed, mock_chunk, mock_has, mock_get):\n'
+    '        r = client.post("/ingest", json={"url": "https://www.youtube.com/watch?v=TgF-uMvhNmg"})\n'
+    '        assert r.status_code == 200\n'
+    '        body = r.json()\n'
+    '        assert body["video_id"] == "TgF-uMvhNmg"\n'
+    '        assert body["chunks_indexed"] == 1\n'
+    '        assert body["already_indexed"] is False\n'
+    '\n'
+    '    @patch("app.main.get_transcript", return_value=_fake_transcript())\n'
+    '    @patch("app.main.has_video", return_value=True)\n'
+    '    def test_already_indexed(self, mock_has, mock_get):\n'
+    '        r = client.post("/ingest", json={"url": "https://www.youtube.com/watch?v=TgF-uMvhNmg"})\n'
+    '        assert r.status_code == 200\n'
+    '        assert r.json()["already_indexed"] is True\n'
+    '\n'
+    '    @patch("app.main.get_transcript", side_effect=ValueError("bad url"))\n'
+    '    def test_bad_url_returns_400(self, mock_get):\n'
+    '        r = client.post("/ingest", json={"url": "not-a-url"})\n'
+    '        assert r.status_code == 400\n'
+    '\n'
+    '\n'
+    'class TestAsk:\n'
+    '    @patch("app.main.has_video", return_value=True)\n'
+    '    @patch("app.main.embed_query", return_value=[0.1] * 384)\n'
+    '    @patch("app.main.search", return_value=_fake_hits())\n'
+    '    @patch("app.main.generate_answer", return_value="The answer is 42.")\n'
+    '    def test_successful_ask(self, mock_gen, mock_search, mock_embed, mock_has):\n'
+    '        r = client.post("/ask", json={"url": "https://www.youtube.com/watch?v=TgF-uMvhNmg", "question": "What is it?"})\n'
+    '        assert r.status_code == 200\n'
+    '        body = r.json()\n'
+    '        assert body["answer"] == "The answer is 42."\n'
+    '        assert len(body["citations"]) == 1\n'
+    '\n'
+    '    @patch("app.main.has_video", return_value=False)\n'
+    '    def test_video_not_indexed_returns_404(self, mock_has):\n'
+    '        r = client.post("/ask", json={"url": "https://www.youtube.com/watch?v=TgF-uMvhNmg", "question": "x"})\n'
+    '        assert r.status_code == 404\n'
+    '\n'
+    '\n'
+    'class TestSummary:\n'
+    '    @patch("app.main.has_video", return_value=True)\n'
+    '    @patch("app.main.get_all_chunks", return_value=_fake_hits())\n'
+    '    @patch("app.main.summarize", return_value="Great video.")\n'
+    '    def test_successful_summary(self, mock_sum, mock_get, mock_has):\n'
+    '        r = client.post("/summary", json={"url": "https://www.youtube.com/watch?v=TgF-uMvhNmg"})\n'
+    '        assert r.status_code == 200\n'
+    '        assert r.json()["summary"] == "Great video."\n'
+    '\n'
+    '    @patch("app.main.has_video", return_value=False)\n'
+    '    def test_video_not_indexed_returns_404(self, mock_has):\n'
+    '        r = client.post("/summary", json={"url": "https://www.youtube.com/watch?v=TgF-uMvhNmg"})\n'
+    '        assert r.status_code == 404\n'
+    '\n'
+    '\n'
+    'class TestQuiz:\n'
+    '    _QUIZ_ITEMS = [\n'
+    '        {"question": "What is 2+2?", "options": ["1", "2", "3", "4"], "answer": "4", "timestamp": "0:00"}\n'
+    '    ]\n'
+    '\n'
+    '    @patch("app.main.has_video", return_value=True)\n'
+    '    @patch("app.main.get_all_chunks", return_value=_fake_hits())\n'
+    '    @patch("app.main.generate_quiz", return_value=[{"question": "What is 2+2?", "options": ["1", "2", "3", "4"], "answer": "4", "timestamp": "0:00"}])\n'
+    '    def test_successful_quiz(self, mock_quiz, mock_get, mock_has):\n'
+    '        r = client.post("/quiz", json={"url": "https://www.youtube.com/watch?v=TgF-uMvhNmg", "num_questions": 1})\n'
+    '        assert r.status_code == 200\n'
+    '        body = r.json()\n'
+    '        assert body["video_id"] == "TgF-uMvhNmg"\n'
+    '        assert len(body["quiz"]) == 1\n'
+    '        assert body["quiz"][0]["answer"] == "4"\n'
+    '\n'
+    '    @patch("app.main.has_video", return_value=False)\n'
+    '    def test_video_not_indexed_returns_404(self, mock_has):\n'
+    '        r = client.post("/quiz", json={"url": "https://www.youtube.com/watch?v=TgF-uMvhNmg"})\n'
+    '        assert r.status_code == 404\n',
+    encoding="utf-8",
+)
+print("test_api.py OK")
+
+# ── Dockerfile ─────────────────────────────────────────────────────────────
+ROOT = pathlib.Path(".")
+lines = [
+    "# syntax=docker/dockerfile:1\n",
+    "# Build a lean production image for the Tube AI RAG API.\n",
+    "#\n",
+    "# Build:  docker build -t yt-ai-rag .\n",
+    "# Run:    docker run -p 8000:8000 --env-file .env yt-ai-rag\n",
+    "\n",
+    "FROM python:3.12-slim\n",
+    "\n",
+    "WORKDIR /app\n",
+    "\n",
+    "# System libs needed by sentence-transformers / chromadb\n",
+    "RUN apt-get update && apt-get install -y --no-install-recommends build-essential \\\n",
+    "    && rm -rf /var/lib/apt/lists/*\n",
+    "\n",
+    "# Copy requirements first (layer-cached separately from code)\n",
+    "COPY requirements.txt .\n",
+    "RUN pip install --no-cache-dir -r requirements.txt\n",
+    "\n",
+    "# Copy application source\n",
+    "COPY app/ ./app/\n",
+    "\n",
+    "EXPOSE 8000\n",
+    "\n",
+    "# Health check -- Docker Desktop shows green when the API is up\n",
+    'HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \\\n',
+    '    CMD python -c "import urllib.request; urllib.request.urlopen(\'http://localhost:8000/health\')"\n',
+    "\n",
+    'CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]\n',
+]
+ROOT.joinpath("Dockerfile").write_text("".join(lines), encoding="utf-8")
+print("Dockerfile OK")
+
+# ── .dockerignore ──────────────────────────────────────────────────────────
+ROOT.joinpath(".dockerignore").write_text(
+    ".git\n"
+    ".gitignore\n"
+    ".env\n"
+    ".chroma/\n"
+    "__pycache__/\n"
+    "*.pyc\n"
+    "*.pyo\n"
+    ".pytest_cache/\n"
+    "tests/\n"
+    "eval/\n"
+    "docs/\n"
+    "*.md\n"
+    ".env.example\n",
+    encoding="utf-8",
+)
+print(".dockerignore OK")
+print("All done!")
