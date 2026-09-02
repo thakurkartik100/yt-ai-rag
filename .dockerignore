@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.chroma/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+tests/
+eval/
+docs/
+*.md
+.env.example
