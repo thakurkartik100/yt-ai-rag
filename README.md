@@ -1,13 +1,3 @@
----
-title: Tube AI RAG API
-emoji: 🎥
-colorFrom: blue
-colorTo: indigo
-sdk: gradio
-app_file: app.py
-pinned: false
----
-
 # 🎥 → 🧠 → 💬 Tube AI RAG API
 
 Ask questions about any YouTube video without watching the whole thing. Paste a link, and the API pulls the transcript, indexes it, and answers your questions with **citations back to the exact timestamp** — plus auto-generated quizzes and summaries.

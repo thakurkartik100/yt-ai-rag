@@ -19,13 +19,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application source
 COPY app/ ./app/
 
-# Hugging Face Spaces run as user 1000. Give all users write access so Chroma can save DB files.
-RUN chmod -R 777 /app
-
-EXPOSE 7860
+EXPOSE 8000
 
 # Health check -- Docker Desktop shows green when the API is up
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:7860/health')"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
