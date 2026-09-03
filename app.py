@@ -15,3 +15,7 @@ demo = gr.Interface(
 
 # 2. Mount the Gradio UI onto our existing FastAPI app
 app = gr.mount_gradio_app(fastapi_app, demo, path="/ui")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=7860)
