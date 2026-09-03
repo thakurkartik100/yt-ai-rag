@@ -23,3 +23,5 @@ openai>=1.0
 # --- v1 milestone 6: evaluation (RAGAS, judged by Gemini free tier) ---
 ragas>=0.4.0
 langchain-google-genai>=2.0
+
+gradio>=4.0.0
